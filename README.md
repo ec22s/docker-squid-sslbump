@@ -1,33 +1,42 @@
 # docker-squid-sslbump
 
-HTTPS通信可視化用のテストコンテナ
+HTTPS通信可視化用のテストコンテナ＋起動用スクリプト
 
 <br>
 
 ### 概要
-- Dockerで, SquidのSSL Bumpを用いてHTTPS通信のリクエストパス等を可視化するもの
+- Dockerで, [Squid](https://www.squid-cache.org/)のSSL Bumpを用いてHTTPS通信のリクエストパス等を可視化するもの
 
-- 実用性はなく, 2025年7月の最新環境でSquid + SSL Bumpが動いた記録および検証用のリポジトリです
+- 実用性はなく, 2025年7月の最新環境でSquid + SSL Bumpが動いた記録および検証用のリポジトリ
 
-  - ルーティングやSquidの設定は「ひとまずこれで動いた」という一例と考えて下さい
+  - ルーティングやSquidの設定は「ひとまずこれで動いた」一例に過ぎません
 
-- 元々はキャッシュ用プロキシサーバ検討時の副産物です. 下記の理由でキャッシュにはほとんど使えません
+- 元々はキャッシュ用プロキシサーバ検討時の副産物. 下記の理由でキャッシュにはほぼ使えません🙇‍♂️
 
-  - クライアント端末のOS/ブラウザ等にTLS証明書をインストールする必要がある
   - SquidがキャッシュできるWebコンテンツは限定的 (レスポンスヘッダにLast-Modifiedがある等)
 
+  - クライアント端末のOS/ブラウザ等にTLS証明書をインストールする必要がある
 
 <br>
 
-### 動作した環境
+### 構成
 
-- WAN側 : 有線
+  ```mermaid
+  flowchart LR
+      r1{{HTTP/HTTPS<br>Request}} <--> w1(Wi-Fi Hotspot)
+      subgraph Host PC
+          w1
+          subgraph docker
+              s(Squid)
+          end
+          r2{{HTTP/HTTPS<br>Request}} <--> w2(Wired LAN)
+      end
+      w1 <--> s
+      s <--> w2
+      w2 <--> i((Internet))
+  ```
 
-- LAN側 : 無線
-
-- ここに図を入れる
-
-- システム
+- ホストPC (Ubuntu 24.04)
 
   ```sh
   uname -v
@@ -43,7 +52,7 @@ HTTPS通信可視化用のテストコンテナ
   # iptables v1.8.10 (nf_tables)
   ```
 
-- コンテナ
+- コンテナ (Ubuntu/squid)
 
    ```sh
    uname -a
@@ -64,18 +73,22 @@ HTTPS通信可視化用のテストコンテナ
    cd docker-squid-sslbump
    ```
 
-2. いわゆるオレオレ証明書を作成
+2. TLS証明書(いわゆるオレオレ証明書)を作成
 
    ```sh
-   openssl req -new -newkey rsa:2048 -days <証明書の有効日数> -nodes -x509 \
+   openssl req -new -newkey rsa:2048 -days {証明書の有効日数} -nodes -x509 \
      -subj '/C=JP' \
      -keyout ./conf/squid_bump.key \
      -out ./conf/squid_bump.crt
    ```
 
-3. LAN側のNIC名を `ip a` 等で確認し `start.sh` に設定
+3. LAN側のNIC名を `ip a` 等で確認, 起動用スクリプト `start.sh` に設定
 
    https://github.com/ec22s/docker-squid-sslbump/blob/070c3fe3ed99e357c57f518553b51e18625d2487/start.sh#L1-L2
+
+   - このNICがホットスポットになって他のNICのインターネット接続を共有していれば, スクリプトの `iptables` 設定によってホットスポット経由のHTTP・HTTPSアクセスがSquidへ転送されます
+
+   - ホストPCからのHTTP・HTTPSアクセスはSquidを経由しません
 
 4. 起動・終了
 
@@ -83,7 +96,15 @@ HTTPS通信可視化用のテストコンテナ
    sudo ./start.sh
    ```
 
-   - 問題なければ最後に `docker ps -a` の出力が表示されます
+   - 下記の順で起動処理が走ります
+
+     - コンテナが起動済みならいったん終了, ボリュームを消去
+
+     - `iptables` でルーティングを設定
+
+     - コンテナを起動 (詳細は `Dockerfile` と `docker-compose.yml` を参照)
+
+     - 問題なければ最後に `docker ps -a` の出力を表示
 
    - 終了は `docker compose down` (コンテナ内部で作られたログやキャッシュは消えます)
 
@@ -105,13 +126,13 @@ HTTPS通信可視化用のテストコンテナ
 
 <br>
 
-### 動作検証した内容
+### 動作確認した手順
 
 - ホストPCの有線LANをインターネットに接続
 
 - ホストPCの無線LANをホットスポットに設定 (インターネット接続を共有)
 
-- いわゆるオレオレ証明書をホストPC上で作成し `conf` ディレクトリに保存
+- TLS証明書をホストPC上で作成し `conf` ディレクトリに保存
 
 - 無線LANのNIC名を `start.sh` に設定
 
@@ -121,12 +142,12 @@ HTTPS通信可視化用のテストコンテナ
 
   ```sh
   # HTTPサイトに初回アクセス
-  curl curl http://abehiroshi.la.coocan.jp/
+  curl http://abehiroshi.la.coocan.jp/
 
   # 同じHTTPサイトにもう一度アクセス (*1)
-  curl curl http://abehiroshi.la.coocan.jp/
+  curl http://abehiroshi.la.coocan.jp/
 
-  # オレオレ証明書を利用してHTTPSサイトに初回アクセス
+  # TLS証明書を利用してHTTPSサイトに初回アクセス
   curl --cacert squid_bump.crt https://www.saitama-u.ac.jp/entrance/
 
   # 同じHTTPSサイトにもう一度アクセス (*2)
@@ -140,9 +161,17 @@ HTTPS通信可視化用のテストコンテナ
   *2) ... TCP_HIT/200 115349 GET https://www.saitama-u.ac.jp/entrance/ - HIER_NONE/- text/html
   ```
 
-- HTTP・HTTPSともにキャッシュがあり, HTTPS通信のリクエストパスが復元されている
+  - HTTP・HTTPSともにキャッシュがありヒットしたことが分かる
+
+  - HTTPS通信のGETリクエストが可視化されている (本来はFQDNへのCONNECTリクエストしか見えない)
+
+<br>
 
 - ただし多くのWebサイトではSquidがキャッシュできない. レスポンスヘッダに `Last-Modified` がない等の理由で, リクエストの都度コンテンツを取得してしまう
+
+- 通常のHTTPSリクエストは証明書エラーで失敗する
+
+- 接続したPCの常駐プロセス (ルート証明書取得等) が定期的にHTTPSリクエストを送っていると, そのエラーがSquidのアクセスログに大量に記録される
 
 <br>
 
