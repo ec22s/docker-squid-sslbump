@@ -1,0 +1,15 @@
+services:
+  squid:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    container_name: squid
+    hostname: squid
+    volumes:
+    - ./conf/squid.conf:/etc/squid/squid.conf
+    - ./conf/squid_bump.crt:/etc/squid/squid_bump.crt
+    - ./conf/squid_bump.key:/etc/squid/squid_bump.key
+    network_mode: host
+    environment:
+      TZ: Asia/Tokyo
