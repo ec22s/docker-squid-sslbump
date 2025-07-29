@@ -29,7 +29,7 @@ HTTPS通信可視化用のテストコンテナ＋起動用スクリプト
           subgraph docker
               s(Squid)
           end
-          r2{{HTTP/HTTPS<br>Request}} <--> w2(Wired LAN)
+          r2{{HTTP/HTTPS<br>Request}} <--> w2(Wired LAN<br>or<br>Wi-Fi)
       end
       w1 <--> s
       s <--> w2
