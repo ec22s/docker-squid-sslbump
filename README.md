@@ -86,13 +86,13 @@ HTTPS通信可視化用のテストコンテナ＋起動用スクリプト
 
    https://github.com/ec22s/docker-squid-sslbump/blob/070c3fe3ed99e357c57f518553b51e18625d2487/start.sh#L1-L2
 
-   - スクリプトの `iptables` 設定により、下記の挙動になります
+   - 起動すると下記の挙動になります
 
-     - LAN側のNICに来たHTTP・HTTPSアクセスがSquidへ転送される
+     - LAN側のNICに来たHTTP・HTTPSアクセスがDocker内のSquidへ転送される
 
-       - 例えばLAN側のNICをWi-Fiホットスポットにすれば、それに接続した機器からのアクセスがSquidへ転送される
+       - 例えばLAN側のNICをWi-Fiホットスポットにすれば, それに接続した機器からのアクセスがSquidへ転送される
 
-     - 他のNICでインターネットにつながっていれば、Docker内のSquidから自動的にインターネットにアクセスする
+     - 他のNICでインターネットにつながっていれば, Squidから自動的にインターネットにアクセスし, 結果をリクエスト元に返す
 
      - ホストPCからのHTTP・HTTPSアクセスはSquidを経由しない
 
