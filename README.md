@@ -23,13 +23,13 @@ HTTPS通信可視化用のテストコンテナ＋起動用スクリプト
 
   ```mermaid
   flowchart LR
-      r1{{HTTP/HTTPS<br>Request}} <--> w1(Wi-Fi Hotspot)
+      r1{{HTTP/HTTPS<br>Request}} <--> w1("NIC (LAN)")
       subgraph Host PC
           w1
           subgraph docker
               s(Squid)
           end
-          r2{{HTTP/HTTPS<br>Request}} <--> w2(Wired LAN<br>or<br>Wi-Fi)
+          r2{{HTTP/HTTPS<br>Request}} <--> w2("NIC (WAN)")
       end
       w1 <--> s
       s <--> w2
@@ -86,9 +86,15 @@ HTTPS通信可視化用のテストコンテナ＋起動用スクリプト
 
    https://github.com/ec22s/docker-squid-sslbump/blob/070c3fe3ed99e357c57f518553b51e18625d2487/start.sh#L1-L2
 
-   - このNICがホットスポットになって他のNICのインターネット接続を共有していれば, スクリプトの `iptables` 設定によってホットスポット経由のHTTP・HTTPSアクセスがSquidへ転送されます
+   - スクリプトの `iptables` 設定により、下記の挙動になります
 
-   - ホストPCからのHTTP・HTTPSアクセスはSquidを経由しません
+     - LAN側のNICに来たHTTP・HTTPSアクセスがSquidへ転送される
+
+       - 例えばLAN側のNICをWi-Fiホットスポットにすれば、それに接続した機器からのアクセスがSquidへ転送される
+
+     - 他のNICでインターネットにつながっていれば、Docker内のSquidから自動的にインターネットにアクセスする
+
+     - ホストPCからのHTTP・HTTPSアクセスはSquidを経由しない
 
 4. 起動・終了
 
